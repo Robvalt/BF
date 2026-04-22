@@ -20,13 +20,8 @@ jobs:
       - name: Build project
         run: make all
 
-      - name: Zip build
-        uses: thedoctor0/zip-release@0.7.6
-        with:
-          type: 'zip'
-          filename: 'build/release.zip'
-          directory: './build'
-          exclusions: '*.git*'
+      - name: Archive Build
+        run: tar -czvf BF.tar.gz ./build
 
 
       - name: Create GitHub Release
