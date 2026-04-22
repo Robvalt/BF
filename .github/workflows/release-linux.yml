@@ -1,9 +1,9 @@
 name: Build and Release
 on:
-  push
+  push:
 
 permissions:
-  contents: write # Required to create the release
+  contents: write
 
 jobs:
   release:
@@ -23,12 +23,10 @@ jobs:
           directory: './build'
           exclusions: '*.git*'
 
-
       - name: Create GitHub Release
-        uses: [softprops/action-gh-release@v2](https://github.com)
+        uses: softprops/action-gh-release@v2
         with:
-          files: |
-            build/release.zip
+          files: build/release.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
