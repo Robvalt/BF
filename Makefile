@@ -60,6 +60,6 @@ help:
 	@echo "  run-wine64  - Run the Windows x86_64 build with Wine"
 	@echo "  run-wine32  - Run the Windows i686 build with Wine"
 	@echo "  clean       - Remove build artifacts"
-	@echo "  help        - Show this help message"
+	@echo "  help        - Show this message"
 
 .PHONY: all clean linux win64 win32 run-linux run-win64 run-win32 run-wine64 run-wine32 help
