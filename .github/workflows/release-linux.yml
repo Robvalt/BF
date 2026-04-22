@@ -1,0 +1,34 @@
+name: Build and Release
+on:
+  push
+
+permissions:
+  contents: write # Required to create the release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: [actions/checkout@v4](https://github.com)
+
+      - name: Build project
+        run: make all # Replace 'build' with your specific Makefile target
+
+      - name: Zip build
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: 'zip'
+          filename: 'build/release.zip'
+          directory: './build'
+          exclusions: '*.git*'
+
+
+      - name: Create GitHub Release
+        uses: [softprops/action-gh-release@v2](https://github.com)
+        with:
+          files: |
+            build/release.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
