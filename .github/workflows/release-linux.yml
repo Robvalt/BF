@@ -9,12 +9,11 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-    
       - name: Checkout code
-        uses: [actions/checkout@v4](https://github.com)
+        uses: actions/checkout@v4
 
       - name: Build project
-        run: make all # Replace 'build' with your specific Makefile target
+        run: make all
 
       - name: Zip build
         uses: thedoctor0/zip-release@0.7.6
