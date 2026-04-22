@@ -29,6 +29,7 @@ jobs:
         with:
           files: BF.tar.gz
           generate_release_notes: true
-          tag: AUTO-BUILD
+          name: AUTO-BUILD
+          tag-name: AUTO-BUILD
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
