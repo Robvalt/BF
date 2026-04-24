@@ -12,21 +12,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install MinGW Cross-Compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mingw-w64
+
       - name: Build project
         run: make all
 
-      - name: Zip build
-        uses: thedoctor0/zip-release@0.7.6
-        with:
-          type: 'zip'
-          filename: 'build/release.zip'
-          directory: './build'
-          exclusions: '*.git*'
+      - name: Archive Build
+        run: tar -czvf BF.tar.gz ./build
+
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: build/release.zip
+          files: BF.tar.gz
           generate_release_notes: true
+          name: AUTO-BUILD
+          tag_name: AUTO-BUILD
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
