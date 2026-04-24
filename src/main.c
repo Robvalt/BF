@@ -17,7 +17,7 @@
 #endif
 
 unsigned char bytebeat(unsigned int t) {
-    return t * ((t >> 12 | t >> 8) & 63 & t >> 4);
+    return t>>8 | t<<4;
 }
 
 int main() {

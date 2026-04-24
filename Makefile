@@ -9,6 +9,8 @@ BUILDDIR := build
 SRCDIR   := src
 
 # Default target
+default: help
+
 all: clean linux win64 win32
 
 # Source discovery
