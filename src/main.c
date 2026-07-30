@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 #ifndef SAMPLE_RATE
-#define SAMPLE_RATE 8000
+#define SAMPLE_RATE 44100
 #endif
 
 #ifdef _WIN32
@@ -17,18 +17,18 @@
 #endif
 
 unsigned char bytebeat(unsigned int t) {
-    return t>>8 | t<<4;
+    return 8E5*t/(t>>2^t>>12);
 }
 
 int main() {
     char cmd[256];
     
     // Dynamically build the command string based on the OS and Sample Rate
-#ifdef _WIN32
-    snprintf(cmd, sizeof(cmd), "ffplay -f u8 -ar %d -ac 1 -nodisp -i -", SAMPLE_RATE);
-#else
-    snprintf(cmd, sizeof(cmd), "aplay -r %d -c 1 -t raw", SAMPLE_RATE);
-#endif
+    #ifdef _WIN32
+        snprintf(cmd, sizeof(cmd), "ffplay -f u8 -ar %d -ac 1 -nodisp -i -", SAMPLE_RATE);
+    #else
+        snprintf(cmd, sizeof(cmd), "aplay -r %d -c 1 -t raw", SAMPLE_RATE);
+    #endif
 
     FILE *audioPipe = POPEN(cmd, WRITE_MODE);
     if (!audioPipe) {

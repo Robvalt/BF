@@ -8,6 +8,11 @@ LDFLAGS  := -lm
 BUILDDIR := build
 SRCDIR   := src
 
+# X11 & Cairo specific flags for Linux
+# pkg-config safely resolves the installation paths for Cairo headers and libraries
+X11_CFLAGS  := $(shell pkg-config --cflags cairo)
+X11_LDFLAGS := -lX11 -lXext $(shell pkg-config --libs cairo)
+
 # Default target
 default: help
 
@@ -19,7 +24,7 @@ SRCS := $(wildcard $(SRCDIR)/*.c)
 # Build rules
 linux:
 	mkdir -p $(BUILDDIR)
-	$(CC_LINUX) $(CFLAGS) $(SRCS) -o $(BUILDDIR)/BF.x86_64.elf $(LDFLAGS)
+	$(CC_LINUX) $(CFLAGS) $(X11_CFLAGS) $(SRCS) -o $(BUILDDIR)/BF.x86_64.elf $(LDFLAGS) $(X11_LDFLAGS)
 
 win64:
 	mkdir -p $(BUILDDIR)
@@ -36,7 +41,7 @@ run-win64: win64
 	./$(BUILDDIR)/BF.win64.exe
 
 run-win32: win32
-	./$(BUILDDIR)/BF.win32.
+	./$(BUILDDIR)/BF.win32.exe
 	
 run-wine64: win64
 	wine $(BUILDDIR)/BF.win64.exe
@@ -53,7 +58,7 @@ help:
 	@echo ""
 	@echo "Targets:"
 	@echo "  all         - Build for all platforms"
-	@echo "  linux       - Build for Linux (x86_64)"
+	@echo "  linux       - Build for Linux (x86_64 with X11/Cairo overlay)"
 	@echo "  win64       - Build for Windows (x86_64)"
 	@echo "  win32       - Build for Windows (i686)"
 	@echo "  run-linux   - Run the Linux build"
