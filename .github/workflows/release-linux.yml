@@ -1,6 +1,9 @@
 name: Build and Release
+
 on:
   push:
+    tags:
+      - 'v*' # Triggers the workflow only when you push a version tag like v1.0.0
 
 permissions:
   contents: write
@@ -12,24 +15,32 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install MinGW Cross-Compiler
+      - name: Install Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y mingw-w64
+          sudo apt-get install -y mingw-w64 zip
 
-      - name: Build project
+      - name: Build Project
         run: make all
 
-      - name: Archive Build
-        run: tar -czvf BF.tar.gz ./build
-
+      - name: Archive Build Artifacts
+        run: |
+          # Package Linux binary into a tar.gz
+          tar -czvf BF-Linux.tar.gz -C build BF.x86_64.elf
+          
+          # Package Windows binaries into separate zip files
+          cd build
+          zip ../BF-Win64.zip BF.win64.exe
+          zip ../BF-Win32.zip BF.win32.exe
+          cd ..
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: BF.tar.gz
+          files: |
+            BF-Linux.tar.gz
+            BF-Win64.zip
+            BF-Win32.zip
           generate_release_notes: true
-          name: AUTO-BUILD
-          tag_name: AUTO-BUILD
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
