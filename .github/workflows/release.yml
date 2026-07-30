@@ -9,19 +9,83 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  # JOB 1: Calculate the next incremented version number
+  setup:
     runs-on: ubuntu-latest
+    outputs:
+      next_version: ${{ steps.versioning.outputs.next_version }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Calculate Next Version
+        id: versioning
+        run: |
+          # Fetch the latest release tag name from GitHub API
+          LATEST_TAG=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            https://github.com{{ github.repository }}/releases/latest | jq -r .tag_name)
+          
+          # Fallback if no releases exist yet
+          if [ "$LATEST_TAG" == "null" ] || [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG="v1.0"
+          fi
+          
+          # Extract numerical part (e.g., v1.4 -> 1.4)
+          NUM_PART=$(echo "$LATEST_TAG" | sed 's/[^0-9.]//g')
+          
+          # Increment by 0.1 using basic calculator (bc)
+          NEXT_NUM=$(echo "$NUM_PART + 0.1" | bc)
+          
+          # Format next tag
+          NEXT_TAG="v$NEXT_NUM"
+          echo "Next calculated version: $NEXT_TAG"
+          echo "next_version=$NEXT_TAG" >> $GITHUB_OUTPUT
 
-      - name: Install Build Dependencies
+  # JOB 2: Prepare environment dependencies
+  install-tools:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Install Compilers and Archivers
         run: |
           sudo apt-get update
           sudo apt-get install -y mingw-w64 zip
 
+  # JOB 3: Compile all application binaries
+  build:
+    runs-on: ubuntu-latest
+    needs: install-tools
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Compiler Dependencies (Required on new runner instance)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mingw-w64
+
       - name: Build Project
         run: make all
+
+      - name: Upload Raw Binaries for Packaging Job
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-binaries
+          path: build/
+          retention-days: 1
+
+  # JOB 4: Compress outputs into specific tarball and zip formats
+  package:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download Compiled Binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: compiled-binaries
+          path: build
+
+      - name: Install Zip Tool
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip
 
       - name: Archive Build Artifacts
         run: |
@@ -34,9 +98,33 @@ jobs:
           zip ../BF-Win32.zip BF.win32.exe
           cd ..
 
-      - name: Create GitHub Release
+      - name: Upload Compressed Archives for Release Job
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-archives
+          path: |
+            BF-Linux.tar.gz
+            BF-Win64.zip
+            BF-Win32.zip
+          retention-days: 1
+
+  # JOB 5: Push the new version tracking history to GitHub Releases
+  create-release:
+    runs-on: ubuntu-latest
+    needs: [setup, package]
+    steps:
+      - name: Download Final Archives
+        uses: actions/download-artifact@v4
+        with:
+          name: release-archives
+
+      - name: Create Unique GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.setup.outputs.next_version }}
+          name: "Nightly Build - ${{ needs.setup.outputs.next_version }}"
+          body: "Automated nightly compilation history update."
+          prerelease: true
           files: |
             BF-Linux.tar.gz
             BF-Win64.zip
