@@ -18,27 +18,20 @@ jobs:
       - name: Calculate Next Version
         id: versioning
         run: |
-          # Query the repository via the official, authenticated GitHub API URL endpoint
           LATEST_TAG=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "https://github.com{{ github.repository }}/releases/latest" | jq -r .tag_name)
           
-          # Fallback if no releases exist yet
           if [ "$LATEST_TAG" == "null" ] || [ -z "$LATEST_TAG" ]; then
             LATEST_TAG="v1.0"
           fi
           
-          # Extract numerical part safely
           NUM_PART=$(echo "$LATEST_TAG" | sed 's/[^0-9.]//g')
-          
-          # Increment by 0.1 using basic calculator (bc)
           NEXT_NUM=$(echo "$NUM_PART + 0.1" | bc)
-          
-          # Format next tag
           NEXT_TAG="v$NEXT_NUM"
           echo "Next calculated version: $NEXT_TAG"
           echo "next_version=$NEXT_TAG" >> $GITHUB_OUTPUT
 
-  # JOB 2: Build and Package Artifacts (Combined to leverage a single runner instance)
+  # JOB 2: Build and Package Artifacts under a Headless Virtual Framebuffer Context
   build-and-package:
     runs-on: ubuntu-latest
     needs: setup
@@ -46,20 +39,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install System and Cross-Compiler Dependencies
+      - name: Install System Compilers, Libraries, and X11 Virtual Displays
         run: |
           sudo apt-get update
-          sudo apt-get install -y mingw-w64 libcairo2-dev libasound2-dev pkg-config zip
+          # xvfb provides a fake virtual display layout to let X11 apps pass execution steps safely
+          sudo apt-get install -y mingw-w64 libcairo2-dev libasound2-dev pkg-config xvfb zip
 
-      - name: Build Project
-        run: make all
+      - name: Build Project and Execute via Virtual Framebuffer
+        run: |
+          # xvfb-run fools your app into thinking it is running on a monitor with display context
+          xvfb-run --server-args="-screen 0 1920x1080x24" make all
 
       - name: Archive Build Artifacts into Compression Formats
         run: |
-          # Package Linux binary into a tar.gz
           tar -czvf BF-Linux.tar.gz -C build BF.x86_64.elf
           
-          # Package Windows binaries into separate zip files
           cd build
           zip ../BF-Win64.zip BF.win64.exe
           zip ../BF-Win32.zip BF.win32.exe
