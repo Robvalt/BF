@@ -31,7 +31,7 @@ jobs:
           echo "Next calculated version: $NEXT_TAG"
           echo "next_version=$NEXT_TAG" >> $GITHUB_OUTPUT
 
-  # JOB 2: Build and Package Artifacts under a Headless Virtual Framebuffer Context
+  # JOB 2: Build and Package Artifacts
   build-and-package:
     runs-on: ubuntu-latest
     needs: setup
@@ -39,21 +39,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install System Compilers, Libraries, and X11 Virtual Displays
+      - name: Install System and Cross-Compiler Dependencies
         run: |
           sudo apt-get update
-          # xvfb provides a fake virtual display layout to let X11 apps pass execution steps safely
-          sudo apt-get install -y mingw-w64 libcairo2-dev libasound2-dev pkg-config xvfb zip
+          # Appended libx11-dev, libxext-dev, and libxfixes-dev for header availability
+          sudo apt-get install -y mingw-w64 libcairo2-dev libasound2-dev libx11-dev libxext-dev libxfixes-dev pkg-config zip
 
-      - name: Build Project and Execute via Virtual Framebuffer
+      - name: Build Project Targets Sequentially
         run: |
-          # xvfb-run fools your app into thinking it is running on a monitor with display context
-          xvfb-run --server-args="-screen 0 1920x1080x24" make all
+          make clean
+          make linux
+          make win64
+          make win32
 
       - name: Archive Build Artifacts into Compression Formats
         run: |
+          # Package Linux binary into a tar.gz
           tar -czvf BF-Linux.tar.gz -C build BF.x86_64.elf
           
+          # Package Windows binaries into separate zip files
           cd build
           zip ../BF-Win64.zip BF.win64.exe
           zip ../BF-Win32.zip BF.win32.exe
