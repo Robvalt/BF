@@ -5,7 +5,24 @@ A basic "virus" project im working on, currently has some build targets and a ma
 Note that this project has <strong>NOT</strong> been tested on : 
 * Windows (32bit)
 * Windows (64bit)
-Or any use of wine.
+* Wine On Mac (32bit)
+* Wine On Mac (64bit)
+* Docker Windows Container (32bit)
+* Docker Windows Container (64bit)
+* Winboat VM (32bit)
+* Winboat VM (64bit)
+* Windows Qemu VM (32bit)
+* Windows Qemu VM (64bit)
+
+Is is <strong><italic>planned</italic></strong> to test on :
+* Windows (32bit)
+* Windows (64bit)
+* Docker Windows Container (32bit)
+* Docker Windows Container (64bit)
+* Winboat VM (32bit)
+* Winboat VM (64bit)
+* Windows Qemu VM (32bit)
+* Windows Qemu VM (64bit)
 
 # Building
 The building process is similar to most make-based builds.
@@ -35,13 +52,13 @@ make win32
 make run-wine32
 ```
 
-## Build process (Linux) :
+## Build process (Wine64) :
 ```bash
 make win64
 make run-wine64
 ```
 
-## Build process (Build all without running) :
+## Build process (Build all) (runs on linux by default) :
 ```bash
 make all
 ```
