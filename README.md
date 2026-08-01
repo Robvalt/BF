@@ -1,5 +1,3 @@
-# BF
-
 ## Description
 A basic "virus" project im working on, currently has some build targets and a makefile.
 Note that this project has <strong>NOT</strong> been tested on : 
@@ -23,6 +21,12 @@ Is is <strong><italic>planned</italic></strong> to test on :
 * Winboat VM (64bit)
 * Windows Qemu VM (32bit)
 * Windows Qemu VM (64bit)
+
+## <strong>!WARNING!</strong>
+This project contains executable files that can render
+devices unusable for a short amount of time, though
+note that the program will <strong>NOT</strong> modify anything
+exept Audio/Visual feedback.
 
 # Building
 The building process is similar to most make-based builds.
