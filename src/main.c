@@ -1,48 +1,74 @@
+#include "project_audio.h"
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifndef SAMPLE_RATE
-#define SAMPLE_RATE 44100
-#endif
-
 #ifdef _WIN32
-    #include <io.h>
-    #define POPEN _popen
-    #define PCLOSE _pclose
-    #define WRITE_MODE "wb"
+    #include <windows.h>
 #else
-    #define POPEN popen
-    #define PCLOSE pclose
-    #define WRITE_MODE "w"
+    #include <X11/Xlib.h>
+    #include <X11/Xutil.h>
+    #include <X11/extensions/shape.h>  
+    #include <X11/extensions/Xfixes.h> 
 #endif
 
-unsigned char bytebeat(unsigned int t) {
-    return 8E5*t/(t>>2^t>>12);
-}
+int main(void) {
+#ifdef _WIN32
+    WINDOW_HANDLE window = GetDesktopWindow(); 
+    DISPLAY_HANDLE display = getScreenDisplay(window);
+    GC_HANDLE gc = 0;
+    int width = getWindowWidth(display, window);
+    int height = getWindowHeight(display, window);
+#else
+    Display* dpy = XOpenDisplay(NULL);
+    if (!dpy) return 1;
+    int scr = DefaultScreen(dpy);
+    Window root = RootWindow(dpy, scr);
 
-int main() {
-    char cmd[256];
-    
-    // Dynamically build the command string based on the OS and Sample Rate
-    #ifdef _WIN32
-        snprintf(cmd, sizeof(cmd), "ffplay -f u8 -ar %d -ac 1 -nodisp -i -", SAMPLE_RATE);
-    #else
-        snprintf(cmd, sizeof(cmd), "aplay -r %d -c 1 -t raw", SAMPLE_RATE);
-    #endif
-
-    FILE *audioPipe = POPEN(cmd, WRITE_MODE);
-    if (!audioPipe) {
-        fprintf(stderr, "Fatal: Could not open audio pipe.\n");
+    XVisualInfo vinfo;
+    if (!XMatchVisualInfo(dpy, scr, 32, TrueColor, &vinfo)) {
+        XCloseDisplay(dpy);
         return 1;
     }
+    int width = DisplayWidth(dpy, scr);
+    int height = DisplayHeight(dpy, scr);
 
-    unsigned int t = 0;
-    while (1) {
-        unsigned char sample = bytebeat(t++);
-        if (fputc(sample, audioPipe) == EOF) break;
-    }
+    XSetWindowAttributes attr = {
+        .colormap = XCreateColormap(dpy, root, vinfo.visual, AllocNone),
+        .background_pixel = 0, .border_pixel = 0, .override_redirect = True,
+        .event_mask = ExposureMask
+    };
+    Window window = XCreateWindow(dpy, root, 0, 0, width, height, 0, vinfo.depth, 
+                                  InputOutput, vinfo.visual, 
+                                  CWColormap | CWBorderPixel | CWBackPixel | CWOverrideRedirect | CWEventMask, &attr);
+    XFixesSelectCursorInput(dpy, window, 0);
+    XFixesSetWindowShapeRegion(dpy, window, ShapeInput, 0, 0, None);
+    XMapWindow(dpy, window);
 
-    PCLOSE(audioPipe);
+    DISPLAY_HANDLE display = dpy;
+    GC_HANDLE gc = XCreateGC(display, window, 0, NULL);
+    Visual *visual = vinfo.visual;
+#endif
+
+    printf("Render Overlay Canvas Initialized: %dx%d.\n", width, height);
+    int box_size = 1200 * width / height;
+
+#ifndef _WIN32
+    unsigned long *image_data = malloc(box_size * box_size * sizeof(unsigned long));
+    XImage *x_image = XCreateImage(display, visual, vinfo.depth, ZPixmap, 0, (char *)image_data, box_size, box_size, 32, 0);
+#else
+    void* x_image = NULL;
+#endif
+
+    // Synchronized track execution blocks
+    play_track_1(display, window, gc, x_image, box_size);
+    play_track_2(display, window, gc, x_image, box_size);
+    play_track_3(display, window, gc, x_image, box_size);
+
+#ifndef _WIN32
+    XDestroyImage(x_image); XFreeGC(display, gc);
+    XDestroyWindow(display, window); XCloseDisplay(display);
+#else
+    releaseScreen(window, display, gc);
+#endif
     return 0;
 }
- 
