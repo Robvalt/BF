@@ -18,16 +18,16 @@ jobs:
       - name: Calculate Next Version
         id: versioning
         run: |
-          # Fetch the latest release tag name from GitHub API
+          # Query the repository via the official, authenticated GitHub API URL endpoint
           LATEST_TAG=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            https://github.com{{ github.repository }}/releases/latest | jq -r .tag_name)
+            "https://github.com{{ github.repository }}/releases/latest" | jq -r .tag_name)
           
           # Fallback if no releases exist yet
           if [ "$LATEST_TAG" == "null" ] || [ -z "$LATEST_TAG" ]; then
             LATEST_TAG="v1.0"
           fi
           
-          # Extract numerical part (e.g., v1.4 -> 1.4)
+          # Extract numerical part safely
           NUM_PART=$(echo "$LATEST_TAG" | sed 's/[^0-9.]//g')
           
           # Increment by 0.1 using basic calculator (bc)
@@ -38,56 +38,23 @@ jobs:
           echo "Next calculated version: $NEXT_TAG"
           echo "next_version=$NEXT_TAG" >> $GITHUB_OUTPUT
 
-  # JOB 2: Prepare environment dependencies
-  install-tools:
+  # JOB 2: Build and Package Artifacts (Combined to leverage a single runner instance)
+  build-and-package:
     runs-on: ubuntu-latest
     needs: setup
-    steps:
-      - name: Install Compilers and Archivers
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mingw-w64 zip
-
-  # JOB 3: Compile all application binaries
-  build:
-    runs-on: ubuntu-latest
-    needs: install-tools
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Compiler Dependencies (Required on new runner instance)
+      - name: Install System and Cross-Compiler Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y mingw-w64
+          sudo apt-get install -y mingw-w64 libcairo2-dev libasound2-dev pkg-config zip
 
       - name: Build Project
         run: make all
 
-      - name: Upload Raw Binaries for Packaging Job
-        uses: actions/upload-artifact@v4
-        with:
-          name: compiled-binaries
-          path: build/
-          retention-days: 1
-
-  # JOB 4: Compress outputs into specific tarball and zip formats
-  package:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Download Compiled Binaries
-        uses: actions/download-artifact@v4
-        with:
-          name: compiled-binaries
-          path: build
-
-      - name: Install Zip Tool
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y zip
-
-      - name: Archive Build Artifacts
+      - name: Archive Build Artifacts into Compression Formats
         run: |
           # Package Linux binary into a tar.gz
           tar -czvf BF-Linux.tar.gz -C build BF.x86_64.elf
@@ -108,10 +75,10 @@ jobs:
             BF-Win32.zip
           retention-days: 1
 
-  # JOB 5: Push the new version tracking history to GitHub Releases
+  # JOB 3: Push the new version tracking history to GitHub Releases
   create-release:
     runs-on: ubuntu-latest
-    needs: [setup, package]
+    needs: [setup, build-and-package]
     steps:
       - name: Download Final Archives
         uses: actions/download-artifact@v4
